@@ -1,0 +1,51 @@
+#!/bin/sh
+# Pipe the output of this to somehwhere!
+# E.g., runscript >& runs5
+# Or, if you're watching, runscript |& runs5
+
+COMPILER="mpicc_shmem -O3"
+MACHINE="smp"
+NPROCS="1 2 4 8 16 32 64 128 256 512 1024"
+SOURCE="fan.c"
+PROGRAM="fanin_$MACHINE"
+PROCFLAG="-DNPROC="
+OTHERFLAGS="-DISOUT=0 -DNMAX=1000"
+
+COMPILELINE="$COMPILER ${PROCFLAG}\$NPROC $OTHERFLAGS -o $PROGRAM $SOURCE -lm"
+RUNLINE="mpirun -machine $MACHINE \$EXTRAOPTS -np \$NPROC $PROGRAM"
+SEP='-----------------------------------------------------------------'
+HOSTFILE="temp$$.hosts"
+
+#rm -f temp*.hosts
+
+echo Script started at `date`
+echo $SEP
+
+if [ $MACHINE = "p4" ]
+then
+   echo Setting up for a p4 run...
+   MAXNP=`echo $NPROCS | sed 's/.* //'`
+   echo Maximum number of processors: $MAXNP
+   echo $MAXNP `hostname` | awk '{ for (i = 0; i < $1; i++) print $2 }' > $HOSTFILE
+   echo Host file is:
+   cat $HOSTFILE | uniq -c
+   EXTRAOPTS="-machinefile $HOSTFILE"
+   echo $SEP
+else
+   EXTRAOPTS=""
+fi
+
+for NPROC in $NPROCS
+do
+   uptime
+   #echo "      - " `eval echo $COMPILELINE`
+   #eval $COMPILELINE
+   echo "      - " `eval echo $RUNLINE`
+   eval $RUNLINE
+   echo $SEP
+done
+uptime
+
+echo Script ended at `date`
+
+#rm -f temp*.hosts

@@ -1,0 +1,35 @@
+#!/usr/bin/perl
+
+@nprocs = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024);
+$program = "fanin";
+
+open (UPTIME, ">loads.$$") || die "Couldn't open loads file";
+format UPTIME_TOP =
+nproc  uptime output
+-----  ------------------------------------------------------------------------
+.
+format UPTIME =
+@>>>>  @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+$np,   $uptime
+.
+
+close (STDOUT);
+open (STDOUT, ">times.$$") || die "Couldn't open times file";
+close (STDERR);
+open (STDERR, ">&STDOUT") || die "Couldn't doubly open times file";
+
+select (UPTIME);
+$| = 1;
+select (STDOUT);
+$| = 1;
+
+foreach $np (@nprocs) {
+   $uptime = `uptime`;
+   $uptime =~ s/^\s*//;
+   $uptime =~ s/\s*$//;
+   write UPTIME;
+
+   print "--- $np processes ---\n";
+   system ("$program -num_proc $np");
+}
+
